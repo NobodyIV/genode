@@ -52,6 +52,16 @@ struct Sculpt::Framebuffer : Framebuffer_dialog::Action
 	Signal_handler<Framebuffer> _fb_connector_update_handler {
 		_env.ep(), *this, &Framebuffer::handle_fb_connectors_update };
 
+
+	void refresh_after_toggle() override
+	{
+		log("we're in refresh_after_toggle() in framebuffer.h now");
+
+		_generate_fb_drv_config();
+
+		_dialog_generator.generate_dialog();
+	}
+
 	void _generate_fb_drv_config();
 
 	Framebuffer(Env &env, Allocator &alloc, Dialog::Generator &dialog_generator)

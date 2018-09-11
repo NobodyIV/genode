@@ -8,99 +8,70 @@
 #define _MODEL__FB_CONNECTOR_H_
 
 #include "types.h"
+#include "fb_connector_mode.h"
 
 namespace Sculpt {
 
 	struct Fb_connector;
 	struct Fb_connector_update_policy;
-	struct Fb_connector_mode;
-	struct Fb_connector_mode_update_policy;
 
 	typedef List_model<Fb_connector> Fb_connectors;
-	typedef List_model<Fb_connector_mode> Fb_connector_modes;
 };
 
 
 struct Sculpt::Fb_connector : List_model<Fb_connector>::Element
 {
 	typedef String<32> Name;
+	typedef String<16> Id;
 
 	Name const               name;
 	bool                     connected;
+	bool                     enabled;
 	Fb_connector_modes       modes { };
+	Fb_connector_mode::Id    selected_mode_id {""};
 
-	Fb_connector(Name const &name, bool connected)
-	: name(name), connected(connected) { }
-};
+	Fb_connector_mode selected_mode() const {
+		Fb_connector_mode returned_mode;
+		
+		unsigned max_width = 0;
+		unsigned max_height = 0;
 
-struct Sculpt::Fb_connector_mode : List_model<Fb_connector_mode>::Element
-{
-	typedef String<16> Id;
-
-	unsigned width;
-	unsigned height;
-	unsigned hz;
-
-	Fb_connector_mode(unsigned width, unsigned height, unsigned hz)
-	: width(width), height(height), hz(hz) { }
-
-	Id id() const { return Id(width, "x" , height, "@", hz); }
-
-	bool common(Fb_connectors const& connectors) const
-	{
-		unsigned connector_count = 0;
-		unsigned found_count = 0;
-
-		connectors.for_each([&] (Fb_connector const& connector) {
-			if (connector.connected)
-				++connector_count;
-			connector.modes.for_each([&] (Fb_connector_mode const& mode) {
-				if (mode.id() == id())
-					++found_count;
+		if (selected_mode_id == "") {
+			modes.for_each([&] (Fb_connector_mode const& mode) {
+				if ((mode.width*mode.height) > (max_width*max_height)) {
+					max_width = mode.width;
+					max_height = mode.height;
+					returned_mode = mode;
+				}
 			});
-		});
+		}
 
-		return (found_count >= connector_count);
-	}
-};
+		else {
+			modes.for_each([&] (Fb_connector_mode const& mode) {
+				if (mode.id() == selected_mode_id)
+					returned_mode = mode;
+			});
+		}
 
-
-/**
- * Policy for transforming a 'connector' node into a list model
- */
-struct Sculpt::Fb_connector_mode_update_policy : List_model<Fb_connector_mode>::Update_policy
-{
-	Allocator& _alloc;
-	Fb_connectors& _connectors;
-
-	Fb_connector_mode_update_policy(Allocator &alloc, Fb_connectors& connectors)
-	: _alloc(alloc), _connectors(connectors) { }
-
-	void destroy_element(Fb_connector_mode &elem)
-	{
-		destroy(_alloc, &elem);
+		return returned_mode;
 	}
 
-	Fb_connector_mode &create_element(Xml_node const& node)
-	{
-		Fb_connector_mode& elem = *new (_alloc)
-			Fb_connector_mode(node.attribute_value("width",  0u),
-			                  node.attribute_value("height", 0u),
-			                  node.attribute_value("hz",     0u));
+	/*bool common(Fb_connectors const& connectors) const {}*/
 
-		return elem;
+	void toggle() {
+		enabled = !enabled;
 	}
 
-	void update_element(Fb_connector_mode /* &elem */, const Xml_node& /*node*/)
-	{
+	void set_enabled(bool b) {
+		enabled = b;
 	}
 
-	static bool element_matches_xml_node(Fb_connector_mode const& elem, Xml_node const& node)
-	{
-		return (node.attribute_value("width",  0u) == elem.width)
-		    && (node.attribute_value("height", 0u) == elem.height)
-		    && (node.attribute_value("hz",     0u) == elem.hz);
+	void select_mode(Id m) {
+		selected_mode_id = m;
 	}
+
+	Fb_connector(Name const &name, bool connected/* , bool enabled */)
+	: name(name), connected(connected), enabled(true) { }
 };
 
 
@@ -117,6 +88,7 @@ struct Sculpt::Fb_connector_update_policy : List_model<Fb_connector>::Update_pol
 
 	void destroy_element(Fb_connector &elem)
 	{
+		log("DESTROYING CONNECTOR");
 		destroy(_alloc, &elem);
 	}
 
@@ -126,7 +98,7 @@ struct Sculpt::Fb_connector_update_policy : List_model<Fb_connector>::Update_pol
 			Fb_connector(node.attribute_value("name", Fb_connector::Name()),
 			             node.attribute_value("connected", false));
 
-		Fb_connector_mode_update_policy policy(_alloc, _connectors);
+		Fb_connector_mode_update_policy policy(_alloc/*, _connectors*/);
 		connector.modes.update_from_xml(policy, node);
 
 		return connector;
@@ -136,7 +108,7 @@ struct Sculpt::Fb_connector_update_policy : List_model<Fb_connector>::Update_pol
 	{
 		connector.connected = node.attribute_value("connected", false);
 
-		Fb_connector_mode_update_policy policy(_alloc, _connectors);
+		Fb_connector_mode_update_policy policy(_alloc/*, _connectors*/);
 		connector.modes.update_from_xml(policy, node);
 	}
 

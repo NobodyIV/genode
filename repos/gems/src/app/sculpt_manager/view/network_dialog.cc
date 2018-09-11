@@ -34,7 +34,8 @@ void Sculpt::Network_dialog::_gen_access_point(Xml_generator &xml,
 						_ap_item.gen_button_attr(xml, ap.bssid);
 
 					xml.node("label", [&] () {
-						xml.attribute("text", " "); }); });
+						xml.attribute("text", " "); });
+				});
 
 				gen_named_node(xml, "label", "ssid", [&] () {
 					xml.attribute("text", String<20>(" ", ap.ssid)); });

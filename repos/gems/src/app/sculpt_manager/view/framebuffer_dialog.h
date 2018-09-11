@@ -25,7 +25,7 @@ struct Sculpt::Framebuffer_dialog : Dialog
 
 	Dialog::Generator &_dialog_generator;
 
-	Fb_connectors const &_fb_connectors;
+	Fb_connectors &_fb_connectors;
 
 	Selectable_item  _connector_item { };
 	Selectable_item  _mode_item      { };
@@ -36,14 +36,14 @@ struct Sculpt::Framebuffer_dialog : Dialog
 
 	void _gen_connector(Xml_generator &, Fb_connector const &) const;
 
-	void _gen_mode(Xml_generator &, /* Fb_connector const &, */ Fb_connector_mode const &, bool) const;
+	void _gen_mode(Xml_generator &, Fb_connector const &, Fb_connector_mode const &, bool) const;
 
 	void hover(Xml_node hover);
 
 	struct Action : Interface
 	{
-		// Placeholder the define the actions of the interactive
-		// framebuffer dialog.
+		//virtual void toggle_enabled() = 0;
+		virtual void refresh_after_toggle() = 0;
 	};
 
 	Fb_connector::Name _selected_connector() const
@@ -60,8 +60,9 @@ struct Sculpt::Framebuffer_dialog : Dialog
 
 	void clack(Action &action);
 
-	Framebuffer_dialog(Env &env, Dialog::Generator &dialog_generator,
-	                   Fb_connectors const &fb_connectors)
+	Framebuffer_dialog(Env &env,
+	                   Dialog::Generator &dialog_generator,
+	                   Fb_connectors &fb_connectors)
 	:
 		_env(env), _dialog_generator(dialog_generator),
 		_fb_connectors(fb_connectors)
